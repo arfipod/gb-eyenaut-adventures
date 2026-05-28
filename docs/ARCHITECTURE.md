@@ -2,11 +2,11 @@
 
 ## Tile World
 
-The prototype uses a fixed 32 by 18 tile world stored in WRAM. Each tile is one byte: empty, dirt, grass, or stone. This is intentionally tiny so the code stays readable before introducing streaming.
+The prototype uses a fixed 128 by 18 active world stored in WRAM. Each tile is one byte: empty, dirt, grass, stone, wood, leaves, planks, workbench, or torch. The renderer draws a 32 by 18 background slice around the camera so the logical world can be wider than the Game Boy background map.
 
 ## Chunks
 
-The future world should be divided into compact chunks. Only nearby chunks should live in WRAM; distant chunks should be generated, streamed from ROM, or loaded from save data. `chunk.c` is a placeholder for that step.
+The active world is divided into 16 chunks of 8 columns. `chunk.c` procedurally generates surface height, caves, trees, and basic underground layers per chunk. The next step is to keep only nearby chunks in WRAM and reload distant chunks from generator/save data.
 
 ## Collision
 
@@ -18,7 +18,7 @@ The loop updates input, player physics, camera, chunk bookkeeping, background ti
 
 ## Camera
 
-The camera follows the player horizontally and clamps to the small world width. On DMG this maps directly to background scroll registers.
+The camera follows the player horizontally and clamps to the active world width. Rendering uses the integer tile part of the camera to choose the world slice, and the low three pixel bits to scroll the background smoothly.
 
 ## Hardware Constraints
 

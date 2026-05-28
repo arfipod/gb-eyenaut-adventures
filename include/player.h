@@ -2,6 +2,7 @@
 #define PLAYER_H
 
 #include <stdint.h>
+#include "inventory.h"
 #include "input.h"
 
 #define PLAYER_WIDTH 8
@@ -17,6 +18,6 @@ typedef struct Player {
 } Player;
 
 void player_init(Player *player);
-void player_update(Player *player, const InputState *input);
+void player_update(Player *player, const InputState *input, Inventory *inventory);
 
 #endif

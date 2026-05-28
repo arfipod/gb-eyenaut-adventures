@@ -67,14 +67,17 @@ See `docs/SETUP.md` for WSLg troubleshooting notes.
 ## Controls
 
 - Left / Right: move.
-- A: mine the block in front of the player.
-- B: place a dirt block in front of the player.
+- Up: jump.
+- A: mine the aimed block and add it to the inventory.
+- B: place the selected inventory block.
+- Start: select the next inventory slot.
+- Hold Up or Down while using A/B to aim above or below.
+- Select: open or close the crafting menu.
+- In the crafting menu, Left / Right / Up / Down chooses a recipe, A crafts, and B closes.
 
 ## Roadmap
 
-- Replace the tiny WRAM world with chunk streaming.
-- Add inventory and block selection.
-- Add caves and a better terrain generator.
+- Replace the fixed active chunk set with streamed/save-backed chunks.
 - Add a simple lighting approximation.
 - Add save data once the world format is stable.
 - Integrate hUGEDriver after the core prototype loop feels good.
