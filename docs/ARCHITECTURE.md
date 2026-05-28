@@ -10,7 +10,7 @@ The active world is divided into 16 chunks of 8 columns. `chunk.c` procedurally 
 
 ## Collision
 
-Collision is tile-based. The player is an 8 by 8 pixel box. Movement tests the box corners against solid world tiles before applying horizontal or vertical movement.
+Collision is tile-based. The player sprite is 8 by 16 pixels, but movement uses a 6 by 8 pixel hitbox on the lower half of the sprite so decorative head pixels do not block tight gaps. Movement tests the box corners against solid world tiles before applying horizontal or vertical movement.
 
 ## Render Loop
 

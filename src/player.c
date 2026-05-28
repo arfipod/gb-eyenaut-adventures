@@ -10,13 +10,14 @@
 #define JUMP_SPEED -5
 #define MAX_STEP_UP TILE_SIZE
 #define PLAYER_HITBOX_X_OFFSET 1
+#define PLAYER_HITBOX_Y_OFFSET 8
 #define PLAYER_HITBOX_WIDTH 6
-#define PLAYER_HITBOX_HEIGHT PLAYER_HEIGHT
+#define PLAYER_HITBOX_HEIGHT 8
 
 static uint8_t player_aabb_solid_at(int16_t x, int16_t y)
 {
     return collision_aabb_solid((int16_t)(x + PLAYER_HITBOX_X_OFFSET),
-                                y,
+                                (int16_t)(y + PLAYER_HITBOX_Y_OFFSET),
                                 PLAYER_HITBOX_WIDTH,
                                 PLAYER_HITBOX_HEIGHT);
 }
@@ -102,11 +103,12 @@ static uint8_t overlaps_player(const Player *player, uint16_t tx, uint8_t ty)
     int16_t tile_x = (int16_t)(tx << 3);
     int16_t tile_y = (int16_t)(ty << 3);
     int16_t player_x = (int16_t)(player->x + PLAYER_HITBOX_X_OFFSET);
+    int16_t player_y = (int16_t)(player->y + PLAYER_HITBOX_Y_OFFSET);
 
     return player_x < (int16_t)(tile_x + TILE_SIZE) &&
            (int16_t)(player_x + PLAYER_HITBOX_WIDTH) > tile_x &&
-           player->y < (int16_t)(tile_y + TILE_SIZE) &&
-           (int16_t)(player->y + PLAYER_HITBOX_HEIGHT) > tile_y;
+           player_y < (int16_t)(tile_y + TILE_SIZE) &&
+           (int16_t)(player_y + PLAYER_HITBOX_HEIGHT) > tile_y;
 }
 
 static void aim_tile(const Player *player, const InputState *input, uint16_t *tx, uint8_t *ty)
@@ -115,7 +117,8 @@ static void aim_tile(const Player *player, const InputState *input, uint16_t *tx
     int16_t hitbox_right = (int16_t)(hitbox_left + PLAYER_HITBOX_WIDTH - 1);
     uint16_t left_tile;
     uint16_t right_tile;
-    int16_t target_y = (int16_t)(player->y + (PLAYER_HITBOX_HEIGHT / 2));
+    int16_t hitbox_top = (int16_t)(player->y + PLAYER_HITBOX_Y_OFFSET);
+    int16_t target_y = (int16_t)(hitbox_top + (PLAYER_HITBOX_HEIGHT / 2));
 
     if (hitbox_left < 0) {
         left_tile = 0u;
@@ -136,9 +139,9 @@ static void aim_tile(const Player *player, const InputState *input, uint16_t *tx
     }
 
     if (input->current & J_UP) {
-        target_y = (int16_t)(player->y - 1);
+        target_y = (int16_t)(hitbox_top - 1);
     } else if (input->current & J_DOWN) {
-        target_y = (int16_t)(player->y + PLAYER_HITBOX_HEIGHT);
+        target_y = (int16_t)(hitbox_top + PLAYER_HITBOX_HEIGHT);
     }
 
     if (target_y < 0) {
