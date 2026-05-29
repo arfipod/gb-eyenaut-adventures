@@ -4,7 +4,9 @@
 
 void main(void)
 {
-    splash_show();
+    SplashChoice splash_choice = splash_show();
+    (void)splash_choice;
+
     game_init();
 
     while (1) {

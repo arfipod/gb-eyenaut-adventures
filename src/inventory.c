@@ -2,19 +2,25 @@
 #include "tile_defs.h"
 
 static const Recipe recipes[RECIPE_COUNT] = {
-    { ITEM_PLANK, 4u, ITEM_WOOD, 1u, ITEM_NONE, 0u, 0u },
-    { ITEM_WORKBENCH, 1u, ITEM_PLANK, 4u, ITEM_NONE, 0u, 0u },
-    { ITEM_TORCH, 4u, ITEM_WOOD, 1u, ITEM_STONE, 1u, 1u }
+    { ITEM_PLANK, 4u, TOOL_LEVEL_NONE, ITEM_WOOD, 1u, ITEM_NONE, 0u, 0u },
+    { ITEM_WORKBENCH, 1u, TOOL_LEVEL_NONE, ITEM_PLANK, 4u, ITEM_NONE, 0u, 0u },
+    { ITEM_NONE, 0u, TOOL_LEVEL_STONE, ITEM_WOOD, 1u, ITEM_STONE, 1u, 0u },
+    { ITEM_TORCH, 4u, TOOL_LEVEL_NONE, ITEM_COAL, 1u, ITEM_WOOD, 1u, 0u },
+    { ITEM_TORCH, 2u, TOOL_LEVEL_NONE, ITEM_STONE, 1u, ITEM_WOOD, 1u, 0u },
+    { ITEM_PLATFORM, 2u, TOOL_LEVEL_NONE, ITEM_PLANK, 1u, ITEM_NONE, 0u, 0u },
+    { ITEM_DOOR, 1u, TOOL_LEVEL_NONE, ITEM_PLANK, 3u, ITEM_NONE, 0u, 0u },
+    { ITEM_NONE, 0u, TOOL_LEVEL_IRON, ITEM_IRON, 3u, ITEM_NONE, 0u, 1u }
 };
 
 void inventory_init(Inventory *inventory)
 {
     uint8_t i;
 
-    for (i = 0u; i < INVENTORY_SLOT_COUNT; ++i) {
+    for (i = 0u; i < INVENTORY_ITEM_COUNT; ++i) {
         inventory->counts[i] = 0u;
     }
 
+    inventory->tool_level = TOOL_LEVEL_NONE;
     inventory->selected_slot = ITEM_DIRT;
     inventory->selected_recipe = 0u;
 
@@ -25,7 +31,7 @@ void inventory_init(Inventory *inventory)
 
 bool inventory_can_add_item(const Inventory *inventory, uint8_t item, uint8_t count)
 {
-    if (item >= INVENTORY_SLOT_COUNT || count == 0u || count > INVENTORY_MAX_COUNT) {
+    if (item >= INVENTORY_ITEM_COUNT || count == 0u || count > INVENTORY_MAX_COUNT) {
         return false;
     }
 
@@ -36,7 +42,7 @@ void inventory_add_item(Inventory *inventory, uint8_t item, uint8_t count)
 {
     uint16_t next_count;
 
-    if (item >= INVENTORY_SLOT_COUNT || count == 0u) {
+    if (item >= INVENTORY_ITEM_COUNT || count == 0u) {
         return;
     }
 
@@ -60,7 +66,7 @@ void inventory_add_block(Inventory *inventory, uint8_t tile)
 
 bool inventory_consume_item(Inventory *inventory, uint8_t item, uint8_t count)
 {
-    if (item >= INVENTORY_SLOT_COUNT || inventory->counts[item] < count) {
+    if (item >= INVENTORY_ITEM_COUNT || inventory->counts[item] < count) {
         return false;
     }
 
@@ -107,6 +113,16 @@ uint8_t inventory_item_tile(uint8_t item)
         return TILE_WORKBENCH;
     case ITEM_TORCH:
         return TILE_TORCH;
+    case ITEM_PLATFORM:
+        return TILE_PLATFORM;
+    case ITEM_DOOR:
+        return TILE_DOOR;
+    case ITEM_COAL:
+        return TILE_COAL;
+    case ITEM_COPPER:
+        return TILE_COPPER;
+    case ITEM_IRON:
+        return TILE_IRON;
     default:
         return TILE_EMPTY;
     }
@@ -129,8 +145,45 @@ uint8_t inventory_item_for_tile(uint8_t tile)
         return ITEM_WORKBENCH;
     case TILE_TORCH:
         return ITEM_TORCH;
+    case TILE_PLATFORM:
+        return ITEM_PLATFORM;
+    case TILE_DOOR:
+        return ITEM_DOOR;
+    case TILE_COAL:
+        return ITEM_COAL;
+    case TILE_COPPER:
+        return ITEM_COPPER;
+    case TILE_IRON:
+        return ITEM_IRON;
     default:
         return ITEM_NONE;
+    }
+}
+
+uint8_t inventory_tool_tile(uint8_t tool_level)
+{
+    if (tool_level >= TOOL_LEVEL_IRON) {
+        return TILE_UI_PICKAXE_PLUS;
+    }
+
+    return TILE_UI_PICKAXE;
+}
+
+bool inventory_can_mine_tile(const Inventory *inventory, uint8_t tile)
+{
+    return inventory->tool_level >= inventory_tile_required_tool_level(tile);
+}
+
+uint8_t inventory_tile_required_tool_level(uint8_t tile)
+{
+    switch (tile) {
+    case TILE_STONE:
+    case TILE_COAL:
+    case TILE_COPPER:
+    case TILE_IRON:
+        return TOOL_LEVEL_STONE;
+    default:
+        return TOOL_LEVEL_HAND;
     }
 }
 
@@ -159,26 +212,48 @@ void inventory_prev_recipe(Inventory *inventory)
 
 bool inventory_can_craft(const Inventory *inventory, uint8_t recipe_index, bool near_workbench)
 {
+    return inventory_craft_status(inventory, recipe_index, near_workbench) == CRAFT_STATUS_OK;
+}
+
+uint8_t inventory_craft_status(const Inventory *inventory, uint8_t recipe_index, bool near_workbench)
+{
     const Recipe *recipe = inventory_recipe(recipe_index);
 
     if (recipe->requires_workbench && !near_workbench) {
-        return false;
+        return CRAFT_STATUS_NEEDS_WORKBENCH;
     }
 
-    if (!inventory_can_add_item(inventory, recipe->output_item, recipe->output_count)) {
-        return false;
+    if (recipe->output_tool_level != TOOL_LEVEL_NONE) {
+        if (inventory->tool_level >= recipe->output_tool_level) {
+            return CRAFT_STATUS_ALREADY_OWNED;
+        }
+    } else if (!inventory_can_add_item(inventory, recipe->output_item, recipe->output_count)) {
+        return CRAFT_STATUS_OUTPUT_BLOCKED;
     }
 
     if (inventory->counts[recipe->input_a] < recipe->input_a_count) {
-        return false;
+        return CRAFT_STATUS_NEEDS_MATERIAL;
     }
 
     if (recipe->input_b != ITEM_NONE &&
         inventory->counts[recipe->input_b] < recipe->input_b_count) {
+        return CRAFT_STATUS_NEEDS_MATERIAL;
+    }
+
+    return CRAFT_STATUS_OK;
+}
+
+bool inventory_recipe_input_missing(const Inventory *inventory, uint8_t recipe_index, uint8_t input_index)
+{
+    const Recipe *recipe = inventory_recipe(recipe_index);
+    uint8_t item = input_index == 0u ? recipe->input_a : recipe->input_b;
+    uint8_t count = input_index == 0u ? recipe->input_a_count : recipe->input_b_count;
+
+    if (item == ITEM_NONE) {
         return false;
     }
 
-    return true;
+    return inventory->counts[item] < count;
 }
 
 bool inventory_craft_selected(Inventory *inventory, bool near_workbench)
@@ -195,7 +270,15 @@ bool inventory_craft_selected(Inventory *inventory, bool near_workbench)
         inventory_consume_item(inventory, recipe->input_b, recipe->input_b_count);
     }
 
-    inventory_add_item(inventory, recipe->output_item, recipe->output_count);
-    inventory->selected_slot = recipe->output_item;
+    if (recipe->output_tool_level != TOOL_LEVEL_NONE) {
+        inventory->tool_level = recipe->output_tool_level;
+    } else {
+        inventory_add_item(inventory, recipe->output_item, recipe->output_count);
+
+        if (recipe->output_item < INVENTORY_SLOT_COUNT) {
+            inventory->selected_slot = recipe->output_item;
+        }
+    }
+
     return true;
 }

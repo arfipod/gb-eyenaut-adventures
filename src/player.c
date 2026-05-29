@@ -1,5 +1,7 @@
 #include <gb/gb.h>
+#include "audio.h"
 #include "collision.h"
+#include "mining.h"
 #include "player.h"
 #include "tile_defs.h"
 #include "world.h"
@@ -17,6 +19,12 @@
 #define PLAYER_PLACEMENT_Y_OFFSET 0
 #define PLAYER_PLACEMENT_WIDTH PLAYER_WIDTH
 #define PLAYER_PLACEMENT_HEIGHT PLAYER_HEIGHT
+#define PLAYER_FALL_DAMAGE_DISTANCE 40u
+#define PLAYER_INVULN_TIME 45u
+#define PLAYER_RESPAWN_INVULN_TIME 90u
+#define PLAYER_ACTION_ERROR_TIME 18u
+
+static MiningState mining_state;
 
 static uint8_t player_aabb_solid_at(int16_t x, int16_t y)
 {
@@ -91,6 +99,12 @@ static void move_v(Player *player)
         if (player_aabb_solid_at(player->x, (int16_t)(player->y + step))) {
             if (step > 0) {
                 player->grounded = 1u;
+
+                if (player->fall_distance >= PLAYER_FALL_DAMAGE_DISTANCE) {
+                    player_damage(player, 0);
+                }
+
+                player->fall_distance = 0u;
             }
 
             player->vy = 0;
@@ -98,6 +112,11 @@ static void move_v(Player *player)
         }
 
         player->y = (int16_t)(player->y + step);
+
+        if (step > 0 && player->fall_distance < 255u) {
+            ++player->fall_distance;
+        }
+
         remaining = (int8_t)(remaining - step);
     }
 }
@@ -113,6 +132,17 @@ static uint8_t overlaps_player(const Player *player, uint16_t tx, uint8_t ty)
            (int16_t)(player_x + PLAYER_PLACEMENT_WIDTH) > tile_x &&
            player_y < (int16_t)(tile_y + TILE_SIZE) &&
            (int16_t)(player_y + PLAYER_PLACEMENT_HEIGHT) > tile_y;
+}
+
+bool player_overlaps_aabb(const Player *player, int16_t x, int16_t y, uint8_t w, uint8_t h)
+{
+    int16_t player_x = (int16_t)(player->x + PLAYER_PLACEMENT_X_OFFSET);
+    int16_t player_y = (int16_t)(player->y + PLAYER_PLACEMENT_Y_OFFSET);
+
+    return player_x < (int16_t)(x + w) &&
+           (int16_t)(player_x + PLAYER_PLACEMENT_WIDTH) > x &&
+           player_y < (int16_t)(y + h) &&
+           (int16_t)(player_y + PLAYER_PLACEMENT_HEIGHT) > y;
 }
 
 static void aim_tile(const Player *player, const InputState *input, uint16_t *tx, uint8_t *ty)
@@ -155,68 +185,139 @@ static void aim_tile(const Player *player, const InputState *input, uint16_t *tx
     }
 }
 
-static void use_tool(Player *player, const InputState *input, Inventory *inventory)
+static void update_aim_state(Player *player, const InputState *input, const Inventory *inventory)
 {
-    uint16_t target_tx;
-    uint8_t target_ty;
-    uint8_t tile;
-    uint8_t item;
+    uint8_t target_tile;
+    uint8_t target_item;
+    uint8_t selected_tile;
 
-    aim_tile(player, input, &target_tx, &target_ty);
+    aim_tile(player, input, &player->aim_tx, &player->aim_ty);
+    player->aim_flags = 0u;
 
-    if (input->pressed & J_A) {
-        tile = world_get_tile_or_empty(target_tx, target_ty);
-        item = inventory_item_for_tile(tile);
-
-        if (item == ITEM_NONE || inventory_can_add_item(inventory, item, 1u)) {
-            tile = world_mine_at_pixel((int16_t)(target_tx << 3), (int16_t)(target_ty << 3));
-            inventory_add_block(inventory, tile);
-        }
+    if (player->aim_tx >= WORLD_WIDTH_TILES || player->aim_ty >= WORLD_HEIGHT_TILES) {
+        return;
     }
 
-    else if (input->pressed & J_B) {
-        tile = inventory_selected_tile(inventory);
+    player->aim_flags = PLAYER_AIM_VISIBLE;
+    target_tile = world_get_tile_or_empty(player->aim_tx, player->aim_ty);
+    target_item = inventory_item_for_tile(target_tile);
 
-        if (inventory->counts[inventory->selected_slot] > 0u) {
-            if (!overlaps_player(player, target_tx, target_ty) &&
-                world_place_tile(target_tx, target_ty, tile)) {
-                inventory_consume_selected(inventory);
-            }
-        }
+    if (target_tile != TILE_EMPTY &&
+        inventory_can_mine_tile(inventory, target_tile) &&
+        (target_item == ITEM_NONE || inventory_can_add_item(inventory, target_item, 1u))) {
+        player->aim_flags |= PLAYER_AIM_ACTIONABLE;
+    }
+
+    selected_tile = inventory_selected_tile(inventory);
+
+    if (inventory->counts[inventory->selected_slot] > 0u &&
+        !overlaps_player(player, player->aim_tx, player->aim_ty) &&
+        world_can_place_tile(player->aim_tx, player->aim_ty, selected_tile)) {
+        player->aim_flags |= PLAYER_AIM_ACTIONABLE;
+    }
+}
+
+static void use_placement(Player *player, const InputState *input, Inventory *inventory)
+{
+    uint8_t tile;
+
+    if (!(input->pressed & J_B) || (input->current & J_A)) {
+        return;
+    }
+
+    tile = inventory_selected_tile(inventory);
+
+    if (inventory->counts[inventory->selected_slot] > 0u &&
+        !overlaps_player(player, player->aim_tx, player->aim_ty) &&
+        world_place_tile(player->aim_tx, player->aim_ty, tile)) {
+        inventory_consume_selected(inventory);
+        player->action_error_timer = 0u;
+        audio_play_place();
+    } else {
+        player->action_error_timer = PLAYER_ACTION_ERROR_TIME;
+        audio_play_error();
     }
 }
 
 void player_init(Player *player)
 {
-    player->x = 160;
-    player->y = 64;
+    player->aim_tx = 0u;
+    player->aim_ty = 0u;
+    player->aim_flags = 0u;
+    player->hp = PLAYER_MAX_HP;
+    player->invuln_timer = 0u;
+    player->action_error_timer = 0u;
+    player->fall_distance = 0u;
+    player->facing = 1u;
+    mining_init(&mining_state);
+    player_respawn(player);
+    player->invuln_timer = 0u;
+}
+
+void player_respawn(Player *player)
+{
+    player->x = PLAYER_SPAWN_X;
+    player->y = PLAYER_SPAWN_Y;
     player->vx = 0;
     player->vy = 0;
-    player->facing = 1u;
+    player->fall_distance = 0u;
     player->grounded = 0u;
+}
+
+void player_damage(Player *player, int8_t knockback)
+{
+    if (player->invuln_timer != 0u) {
+        return;
+    }
+
+    if (player->hp > 0u) {
+        --player->hp;
+    }
+
+    player->invuln_timer = PLAYER_INVULN_TIME;
+    player->fall_distance = 0u;
+    player->vx = knockback;
+    player->vy = JUMP_SPEED / 2;
+
+    if (player->hp == 0u) {
+        player_respawn(player);
+        player->hp = PLAYER_MAX_HP;
+        player->invuln_timer = PLAYER_RESPAWN_INVULN_TIME;
+    }
 }
 
 void player_update(Player *player, const InputState *input, Inventory *inventory)
 {
     uint8_t using_tool = (uint8_t)(input->current & (J_A | J_B));
 
-    player->vx = 0;
+    if (player->invuln_timer != 0u) {
+        --player->invuln_timer;
+    } else {
+        player->vx = 0;
+    }
+
+    if (player->action_error_timer != 0u) {
+        --player->action_error_timer;
+    }
 
     if (input->pressed & J_START) {
         inventory_next_slot(inventory);
     }
 
-    if (input->current & J_LEFT) {
+    if (player->invuln_timer == 0u && (input->current & J_LEFT)) {
         player->vx = -WALK_SPEED;
         player->facing = 0u;
-    } else if (input->current & J_RIGHT) {
+    } else if (player->invuln_timer == 0u && (input->current & J_RIGHT)) {
         player->vx = WALK_SPEED;
         player->facing = 1u;
     }
 
-    if ((input->pressed & J_UP) && player->grounded && !using_tool) {
+    if (player->invuln_timer == 0u &&
+        (input->pressed & J_UP) && player->grounded && !using_tool) {
         player->vy = JUMP_SPEED;
         player->grounded = 0u;
+        player->fall_distance = 0u;
+        audio_play_jump();
     }
 
     if (player->vy < MAX_FALL_SPEED) {
@@ -225,5 +326,12 @@ void player_update(Player *player, const InputState *input, Inventory *inventory
 
     move_h(player);
     move_v(player);
-    use_tool(player, input, inventory);
+
+    if (player->invuln_timer != 0u && player->vx != 0) {
+        player->vx = player->vx > 0 ? (int16_t)(player->vx - 1) : (int16_t)(player->vx + 1);
+    }
+
+    update_aim_state(player, input, inventory);
+    mining_update(&mining_state, player, input, inventory);
+    use_placement(player, input, inventory);
 }

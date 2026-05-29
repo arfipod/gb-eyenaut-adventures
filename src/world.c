@@ -2,18 +2,11 @@
 #include "tile_defs.h"
 
 #define WORLD_DIRTY_TILE_COUNT 32u
-#define WORLD_CHANGE_COUNT 128u
 
 typedef struct DirtyTile {
     uint16_t tx;
     uint8_t ty;
 } DirtyTile;
-
-typedef struct ChangedTile {
-    uint16_t tx;
-    uint8_t ty;
-    uint8_t tile;
-} ChangedTile;
 
 static uint8_t tiles[WORLD_ACTIVE_WIDTH_TILES * WORLD_HEIGHT_TILES];
 static DirtyTile dirty_tiles[WORLD_DIRTY_TILE_COUNT];
@@ -21,6 +14,8 @@ static ChangedTile changed_tiles[WORLD_CHANGE_COUNT];
 static uint8_t dirty_count;
 static uint8_t changed_count;
 static uint8_t active_start_chunk;
+static uint8_t lighting_dirty;
+static uint16_t active_seed = WORLD_DEFAULT_SEED;
 
 static uint16_t active_start_tile(void)
 {
@@ -111,7 +106,7 @@ static uint8_t clamp_active_start_chunk(uint8_t start_chunk)
 #endif
 }
 
-static void world_load_active_window(void)
+static void world_load_generated_window(void)
 {
     uint8_t x;
     uint8_t y;
@@ -122,9 +117,29 @@ static void world_load_active_window(void)
             uint16_t world_x = (uint16_t)(start_tile + x);
 
             tiles[(y * WORLD_ACTIVE_WIDTH_TILES) + x] =
-                world_generated_tile_with_changes(world_x, y);
+                world_generated_tile(world_x, y);
         }
     }
+}
+
+void world_apply_changes(void)
+{
+    uint8_t i;
+
+    for (i = 0u; i < changed_count; ++i) {
+        if (changed_tiles[i].ty < WORLD_HEIGHT_TILES &&
+            world_tile_is_active(changed_tiles[i].tx)) {
+            tiles[active_tile_index(changed_tiles[i].tx, changed_tiles[i].ty)] =
+                changed_tiles[i].tile;
+        }
+    }
+}
+
+static void world_load_active_window(void)
+{
+    world_load_generated_window();
+    world_apply_changes();
+    lighting_dirty = 1u;
 }
 
 static void world_mark_dirty(uint16_t tx, uint8_t ty)
@@ -138,10 +153,66 @@ static void world_mark_dirty(uint16_t tx, uint8_t ty)
 
 void world_init(void)
 {
+    chunk_set_seed(active_seed);
     dirty_count = 0u;
-    changed_count = 0u;
+    lighting_dirty = 1u;
     active_start_chunk = 0u;
     world_load_active_window();
+}
+
+void world_set_seed(uint16_t seed)
+{
+    active_seed = seed;
+    chunk_set_seed(active_seed);
+}
+
+uint16_t world_seed(void)
+{
+    return active_seed;
+}
+
+bool world_lighting_dirty(void)
+{
+    return lighting_dirty != 0u;
+}
+
+void world_clear_lighting_dirty(void)
+{
+    lighting_dirty = 0u;
+}
+
+void world_clear_changes(void)
+{
+    changed_count = 0u;
+    lighting_dirty = 1u;
+}
+
+uint8_t world_changed_count(void)
+{
+    return changed_count;
+}
+
+bool world_get_changed_tile(uint8_t index, ChangedTile *change)
+{
+    if (change == 0 || index >= changed_count) {
+        return false;
+    }
+
+    *change = changed_tiles[index];
+    return true;
+}
+
+bool world_restore_changed_tile(const ChangedTile *change)
+{
+    if (change == 0 ||
+        change->tx >= WORLD_WIDTH_TILES ||
+        change->ty >= WORLD_HEIGHT_TILES) {
+        return false;
+    }
+
+    world_save_change(change->tx, change->ty, change->tile);
+    lighting_dirty = 1u;
+    return true;
 }
 
 uint8_t world_get_tile_or_empty(uint16_t tx, uint8_t ty)
@@ -173,11 +244,16 @@ uint8_t world_get_tile_for_collision(uint16_t tx, uint8_t ty)
 void world_set_tile(uint16_t tx, uint8_t ty, uint8_t tile)
 {
     if (tx < WORLD_WIDTH_TILES && ty < WORLD_HEIGHT_TILES) {
+        uint8_t previous_tile = world_get_tile_or_empty(tx, ty);
+
         if (world_tile_is_active(tx)) {
             tiles[active_tile_index(tx, ty)] = tile;
         }
 
         world_save_change(tx, ty, tile);
+
+        lighting_dirty = 1u;
+
         world_mark_dirty(tx, ty);
     }
 }
@@ -307,7 +383,13 @@ static bool world_torch_has_support(uint16_t tx, uint8_t ty)
     return false;
 }
 
-bool world_place_tile(uint16_t tx, uint8_t ty, uint8_t tile)
+static bool world_workbench_has_floor(uint16_t tx, uint8_t ty)
+{
+    return (uint8_t)(ty + 1u) < WORLD_HEIGHT_TILES &&
+           world_is_solid_tile(world_get_tile_or_empty(tx, (uint8_t)(ty + 1u)));
+}
+
+bool world_can_place_tile(uint16_t tx, uint8_t ty, uint8_t tile)
 {
     if (tx >= WORLD_WIDTH_TILES || ty >= WORLD_HEIGHT_TILES || tile == TILE_EMPTY) {
         return false;
@@ -321,7 +403,20 @@ bool world_place_tile(uint16_t tx, uint8_t ty, uint8_t tile)
         if (!world_torch_has_support(tx, ty)) {
             return false;
         }
+    } else if (tile == TILE_WORKBENCH) {
+        if (!world_workbench_has_floor(tx, ty)) {
+            return false;
+        }
     } else if (!world_has_solid_neighbor(tx, ty)) {
+        return false;
+    }
+
+    return true;
+}
+
+bool world_place_tile(uint16_t tx, uint8_t ty, uint8_t tile)
+{
+    if (!world_can_place_tile(tx, ty, tile)) {
         return false;
     }
 

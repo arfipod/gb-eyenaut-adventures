@@ -1,6 +1,11 @@
 #ifndef SPLASH_H
 #define SPLASH_H
 
-void splash_show(void);
+typedef enum SplashChoice {
+    SPLASH_CHOICE_NEW_GAME,
+    SPLASH_CHOICE_CONTINUE
+} SplashChoice;
+
+SplashChoice splash_show(void);
 
 #endif

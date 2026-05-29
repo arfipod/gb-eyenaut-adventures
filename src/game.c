@@ -1,6 +1,8 @@
 #include <gb/gb.h>
+#include "audio.h"
 #include "camera.h"
 #include "chunk.h"
+#include "enemy.h"
 #include "game.h"
 #include "input.h"
 #include "inventory.h"
@@ -10,11 +12,13 @@
 
 static InputState input;
 static Player player;
+static Enemy enemies[ENEMY_MAX_ACTIVE];
 static Camera camera;
 static Inventory inventory;
 static uint8_t menu_open;
 static uint8_t hud_dirty;
 static uint8_t menu_dirty;
+static uint8_t craft_error_timer;
 static bool workbench_nearby;
 
 static bool inventory_changed(const Inventory *a, const Inventory *b)
@@ -22,11 +26,12 @@ static bool inventory_changed(const Inventory *a, const Inventory *b)
     uint8_t i;
 
     if (a->selected_slot != b->selected_slot ||
-        a->selected_recipe != b->selected_recipe) {
+        a->selected_recipe != b->selected_recipe ||
+        a->tool_level != b->tool_level) {
         return true;
     }
 
-    for (i = 0u; i < INVENTORY_SLOT_COUNT; ++i) {
+    for (i = 0u; i < INVENTORY_ITEM_COUNT; ++i) {
         if (a->counts[i] != b->counts[i]) {
             return true;
         }
@@ -52,14 +57,17 @@ void game_init(void)
     world_init();
     inventory_init(&inventory);
     player_init(&player);
+    enemies_init(enemies);
     camera.x = 0u;
     camera.y = 0u;
     menu_open = 0u;
     hud_dirty = 1u;
     menu_dirty = 0u;
+    craft_error_timer = 0u;
     workbench_nearby = false;
 
     render_init();
+    audio_init();
 
     /* TODO: add save data after the world representation is stable. */
     /* TODO: fake lighting with tile variants or coarse palettes on CGB later. */
@@ -68,6 +76,7 @@ void game_init(void)
 void game_update_logic(void)
 {
     Inventory previous_inventory;
+    uint8_t previous_hp;
 
     input_update(&input);
 
@@ -88,21 +97,36 @@ void game_update_logic(void)
 
         if ((input.pressed & J_RIGHT) || (input.pressed & J_DOWN)) {
             inventory_next_recipe(&inventory);
+            craft_error_timer = 0u;
         }
 
         if ((input.pressed & J_LEFT) || (input.pressed & J_UP)) {
             inventory_prev_recipe(&inventory);
+            craft_error_timer = 0u;
         }
 
         if (input.pressed & J_A) {
-            inventory_craft_selected(&inventory, workbench_nearby);
+            if (inventory_craft_selected(&inventory, workbench_nearby)) {
+                craft_error_timer = 0u;
+                audio_play_craft();
+            } else {
+                craft_error_timer = 24u;
+                menu_dirty = 1u;
+                audio_play_error();
+            }
         }
 
         if (input.pressed & J_B) {
             menu_open = 0u;
             hud_dirty = 1u;
             menu_dirty = 0u;
+            craft_error_timer = 0u;
             return;
+        }
+
+        if (craft_error_timer != 0u) {
+            --craft_error_timer;
+            menu_dirty = 1u;
         }
 
         if (menu_dirty || inventory_changed(&previous_inventory, &inventory)) {
@@ -113,11 +137,14 @@ void game_update_logic(void)
     }
 
     previous_inventory = inventory;
+    previous_hp = player.hp;
     player_update(&player, &input, &inventory);
     camera_update(&camera, &player);
     chunk_tick(camera.x);
+    enemies_update(enemies, &camera, &player);
 
-    if (inventory_changed(&previous_inventory, &inventory)) {
+    if (inventory_changed(&previous_inventory, &inventory) ||
+        previous_hp != player.hp) {
         hud_dirty = 1u;
     }
 }
@@ -126,20 +153,20 @@ void game_render_commit(void)
 {
     if (menu_open) {
         if (menu_dirty) {
-            render_menu(&inventory, workbench_nearby);
+            render_menu(&inventory, workbench_nearby, craft_error_timer);
             menu_dirty = 0u;
         }
 
-        render_frame(&camera, &player);
+        render_frame(&camera, &player, enemies);
         return;
     }
 
     render_world(&camera);
 
     if (hud_dirty) {
-        render_hud(&inventory);
+        render_hud(&inventory, &player);
         hud_dirty = 0u;
     }
 
-    render_frame(&camera, &player);
+    render_frame(&camera, &player, enemies);
 }

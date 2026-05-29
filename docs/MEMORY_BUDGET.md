@@ -29,14 +29,14 @@ The current logical world is wider than one background map:
 
 ```text
 WORLD_CHUNK_COUNT x CHUNK_WIDTH_TILES = 16 x 8 = 128 columns
-WORLD_HEIGHT_TILES = 18 rows
-full logical world, if materialized = 128 x 18 = 2304 bytes
+WORLD_HEIGHT_TILES = 32 rows
+full logical world, if materialized = 128 x 32 = 4096 bytes
 ```
 
 The prototype now streams a smaller active chunk window in WRAM:
 
 ```text
-active world tiles = 6 chunks x 8 columns x 18 rows = 864 bytes
+active world tiles = 5 chunks x 8 columns x 32 rows = 1280 bytes
 changed tile log   = 128 entries x about 4 bytes = about 512 bytes
 dirty tile queue   = 32 entries x about 3 bytes = about 96 bytes
 ```
@@ -44,17 +44,18 @@ dirty tile queue   = 32 entries x about 3 bytes = about 96 bytes
 Rendering also keeps CPU-side tile buffers. The background renderer updates one column at a time:
 
 ```text
-bg_buffer  = 18 bytes
-win_buffer = 20 x 18 = 360 bytes
+bg_buffer           = 32 bytes
+tile_variant_buffer = 16 bytes
+win_buffer          = 20 x 18 = 360 bytes
 ```
 
 Those main arrays are roughly:
 
 ```text
-864 + 512 + 96 + 18 + 360 = 1850 bytes
+1280 + 512 + 96 + 32 + 16 + 360 = 2296 bytes
 ```
 
-That is about 23% of DMG WRAM before stack, player state, camera state, inventory, library globals, enemies, dropped items, or a real save system.
+That is about 28% of DMG WRAM before stack, player state, camera state, inventory, library globals, enemies, dropped items, or a real save system.
 
 ## First Approximation
 

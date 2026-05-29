@@ -70,16 +70,31 @@ See `docs/SETUP.md` for WSLg troubleshooting notes.
 
 - Left / Right: move.
 - Up: jump.
-- A: mine the aimed block and add it to the inventory.
+- Hold A: mine the aimed block and add it to the inventory when it breaks.
 - B: place the selected inventory block.
 - Start: select the next inventory slot.
 - Hold Up or Down while using A/B to aim above or below.
 - Select: open or close the crafting menu.
 - In the crafting menu, Left / Right / Up / Down chooses a recipe, A crafts, and B closes.
 
+## Crafting
+
+The crafting menu shows input tiles on the left and the output on the right. Missing materials blink after a failed craft and play the error SFX. The lock icon is reserved for recipes that need a nearby workbench.
+
+Current recipes:
+
+- Wood -> planks.
+- Planks -> workbench.
+- Wood + stone -> basic stone pickaxe.
+- Coal + wood -> torches.
+- Stone + wood -> torches.
+- Planks -> platforms.
+- Planks -> door.
+- Iron -> better pickaxe, near a workbench.
+
+The current tool system is global and has no durability. Hand mining works for soft blocks; stone and ores need the basic stone pickaxe. Blocks have mining time: dirt breaks quickly, stone is slower, and ores take longer.
+
 ## Roadmap
 
-- Replace the fixed active chunk set with streamed/save-backed chunks.
-- Add a simple lighting approximation.
-- Add save data once the world format is stable.
+- Persist the current seed + changed-tile log in battery SRAM.
 - Integrate hUGEDriver after the core prototype loop feels good.

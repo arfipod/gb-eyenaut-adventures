@@ -1,12 +1,18 @@
 #include <gb/gb.h>
 #include <gbdk/console.h>
 #include <gbdk/font.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include "splash.h"
 
 #define SPLASH_ROBOT_TILE_BASE 128u
 #define SPLASH_ROBOT_WIDTH 5u
 #define SPLASH_ROBOT_HEIGHT 6u
+#define SPLASH_ROBOT_X 7u
+#define SPLASH_ROBOT_Y_TOP 5u
+#define SPLASH_ROBOT_Y_LOW 6u
+#define SPLASH_MENU_NEW_GAME 0u
+#define SPLASH_MENU_CONTINUE 1u
 
 static const uint8_t splash_robot_tiles[SPLASH_ROBOT_WIDTH * SPLASH_ROBOT_HEIGHT * 16u] = {
     0x00,0x00,0x00,0x00,0x01,0x01,0x01,0x01,0x01,0x01,0x02,0x02,0x02,0x02,0x02,0x02,
@@ -55,26 +61,105 @@ static const uint8_t splash_robot_map[SPLASH_ROBOT_WIDTH * SPLASH_ROBOT_HEIGHT] 
     SPLASH_ROBOT_TILE_BASE + 25u, SPLASH_ROBOT_TILE_BASE + 26u, SPLASH_ROBOT_TILE_BASE + 27u, SPLASH_ROBOT_TILE_BASE + 28u, SPLASH_ROBOT_TILE_BASE + 29u
 };
 
-static void splash_wait_for_start(void)
+static bool splash_has_save(void)
 {
-    while (!(joypad() & J_START)) {
-        wait_vbl_done();
-    }
-
-    while (joypad() & J_START) {
-        wait_vbl_done();
-    }
+    return false;
 }
 
-static void draw_splash_robot(void)
+static void load_splash_robot_tiles(void)
 {
     set_bkg_data(SPLASH_ROBOT_TILE_BASE,
                  SPLASH_ROBOT_WIDTH * SPLASH_ROBOT_HEIGHT,
                  splash_robot_tiles);
-    set_bkg_tiles(7u, 5u, SPLASH_ROBOT_WIDTH, SPLASH_ROBOT_HEIGHT, splash_robot_map);
 }
 
-void splash_show(void)
+static void draw_splash_ground(void)
+{
+    gotoxy(1u, 11u);
+    printf("  _________________");
+    gotoxy(1u, 12u);
+    printf("_/ o  _  o  _  o  \\");
+}
+
+static void clear_splash_robot(uint8_t y)
+{
+    uint8_t row;
+
+    for (row = 0u; row != SPLASH_ROBOT_HEIGHT; ++row) {
+        gotoxy(SPLASH_ROBOT_X, y + row);
+        printf("     ");
+    }
+}
+
+static void draw_splash_robot(uint8_t y)
+{
+    set_bkg_tiles(SPLASH_ROBOT_X, y, SPLASH_ROBOT_WIDTH, SPLASH_ROBOT_HEIGHT, splash_robot_map);
+}
+
+static void draw_title_menu(uint8_t selected, bool has_save)
+{
+    gotoxy(3u, 14u);
+    printf("%c NEW GAME ", (selected == SPLASH_MENU_NEW_GAME) ? '>' : ' ');
+
+    gotoxy(3u, 15u);
+    if (has_save) {
+        printf("%c CONTINUE ", (selected == SPLASH_MENU_CONTINUE) ? '>' : ' ');
+    } else {
+        printf("%c CONTINUE-", (selected == SPLASH_MENU_CONTINUE) ? '>' : ' ');
+    }
+
+    gotoxy(3u, 17u);
+    printf("START / A");
+}
+
+static SplashChoice run_title_menu(void)
+{
+    uint8_t selected = SPLASH_MENU_NEW_GAME;
+    uint8_t previous_joypad = joypad();
+    uint8_t frame = 0u;
+    uint8_t robot_y = SPLASH_ROBOT_Y_TOP;
+    uint8_t next_robot_y;
+    bool has_save = splash_has_save();
+
+    draw_title_menu(selected, has_save);
+
+    while (true) {
+        uint8_t current_joypad = joypad();
+        uint8_t pressed = current_joypad & (uint8_t)~previous_joypad;
+
+        if (pressed & (J_UP | J_DOWN)) {
+            selected = (selected == SPLASH_MENU_NEW_GAME) ? SPLASH_MENU_CONTINUE : SPLASH_MENU_NEW_GAME;
+            draw_title_menu(selected, has_save);
+        }
+
+        if (pressed & (J_START | J_A)) {
+            if ((selected == SPLASH_MENU_NEW_GAME) || has_save) {
+                while (joypad() & (J_START | J_A)) {
+                    wait_vbl_done();
+                }
+
+                return (selected == SPLASH_MENU_NEW_GAME) ? SPLASH_CHOICE_NEW_GAME : SPLASH_CHOICE_CONTINUE;
+            }
+
+            selected = SPLASH_MENU_NEW_GAME;
+            draw_title_menu(selected, has_save);
+        }
+
+        next_robot_y = ((frame & 0x20u) != 0u) ? SPLASH_ROBOT_Y_LOW : SPLASH_ROBOT_Y_TOP;
+        if (next_robot_y != robot_y) {
+            clear_splash_robot(robot_y);
+            draw_splash_ground();
+            robot_y = next_robot_y;
+            draw_splash_robot(robot_y);
+        }
+
+        previous_joypad = current_joypad;
+        ++frame;
+        wait_vbl_done();
+    }
+}
+
+SplashChoice splash_show(void)
 {
     DISPLAY_OFF;
     HIDE_WIN;
@@ -99,20 +184,15 @@ void splash_show(void)
     gotoxy(2u, 8u);
     printf("-'        .      ");
 
-    draw_splash_robot();
+    load_splash_robot_tiles();
+    draw_splash_robot(SPLASH_ROBOT_Y_TOP);
+    draw_splash_ground();
 
-    gotoxy(1u, 11u);
-    printf("  _________________");
-    gotoxy(1u, 12u);
-    printf("_/ o  _  o  _  o  \\");
-
-    gotoxy(3u, 14u);
-    printf("> PRESS START");
     gotoxy(4u, 16u);
     printf("Angel R. 2026");
 
     SHOW_BKG;
     DISPLAY_ON;
 
-    splash_wait_for_start();
+    return run_title_menu();
 }

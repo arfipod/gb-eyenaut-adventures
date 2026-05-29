@@ -12,20 +12,38 @@
 #define TILE_PLANK 6u
 #define TILE_WORKBENCH 7u
 #define TILE_TORCH 8u
+#define TILE_COAL 9u
+#define TILE_COPPER 10u
+#define TILE_IRON 11u
+#define TILE_PLATFORM 12u
+#define TILE_DOOR 13u
+#define TILE_WORLD_COUNT 14u
 
-#define TILE_UI_CURSOR 9u
-#define TILE_UI_PANEL 10u
-#define TILE_UI_ARROW 11u
-#define TILE_UI_LOCK 12u
-#define TILE_DIGIT_0 13u
-#define TILE_DIGIT_9 22u
+#define TILE_UI_CURSOR 14u
+#define TILE_UI_PANEL 15u
+#define TILE_UI_ARROW 16u
+#define TILE_UI_LOCK 17u
+#define TILE_DIGIT_0 18u
+#define TILE_DIGIT_9 27u
+#define TILE_UI_PICKAXE 28u
+#define TILE_UI_PICKAXE_PLUS 29u
+#define TILE_UI_HEART 30u
 
-#define TILE_COUNT 23u
+#define TILE_NORMAL_COUNT 31u
+#define TILE_DARK_BASE TILE_NORMAL_COUNT
+#define TILE_VERY_DARK_BASE (TILE_DARK_BASE + TILE_WORLD_COUNT)
+#define TILE_COUNT (TILE_NORMAL_COUNT + (TILE_WORLD_COUNT * 2u))
 #define TILE_SIZE 8u
-#define PLAYER_TILE_BASE 24u
+#define PLAYER_TILE_BASE TILE_COUNT
 #define PLAYER_TILE_COUNT 2u
+#define CURSOR_SPRITE_TILE_BASE (PLAYER_TILE_BASE + PLAYER_TILE_COUNT)
+#define CURSOR_SPRITE_TILE_COUNT 8u
+#define ENEMY_SPRITE_TILE_BASE (CURSOR_SPRITE_TILE_BASE + CURSOR_SPRITE_TILE_COUNT)
+#define ENEMY_SPRITE_TILE_COUNT 2u
 
 extern const uint8_t terrain_tiles[TILE_COUNT * 16u];
 extern const uint8_t player_tiles[PLAYER_TILE_COUNT * 16u];
+extern const uint8_t cursor_sprite_tiles[CURSOR_SPRITE_TILE_COUNT * 16u];
+extern const uint8_t enemy_sprite_tiles[ENEMY_SPRITE_TILE_COUNT * 16u];
 
 #endif
