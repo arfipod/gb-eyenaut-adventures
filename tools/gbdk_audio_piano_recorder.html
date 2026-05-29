@@ -17,7 +17,7 @@
 <body>
   <header><h1>GBDK Audio Piano Recorder</h1><p>Play with your PC keyboard, record melodies, edit a tracker-style grid, and export compact C data plus playback helpers for GBDK / original Game Boy.</p></header>
   <main>
-    <section class="panel stack"><h2>Song</h2><div class="grid-2"><label>Asset name<input id="assetName" value="eyenaut_theme" spellcheck="false" /></label><label>Channel<select id="channel"><option value="1">CH1 Square + sweep</option><option value="2" selected>CH2 Square</option><option value="4">CH4 Noise percussion</option></select></label></div><div class="grid-3"><label>BPM<input id="bpm" type="number" min="40" max="240" value="120" /></label><label>Step division<select id="division"><option value="4">1/4</option><option value="8" selected>1/8</option><option value="16">1/16</option></select></label><label>Pulses<input id="pulses" type="number" min="1" max="64" value="16" /></label></div><div class="grid-2"><label>Octave<input id="octave" type="number" min="2" max="6" value="4" /></label><label>Default length steps<input id="defaultLen" type="number" min="1" max="16" value="2" /></label></div><div class="grid-2"><label>Duty<select id="duty"><option value="0">12.5%</option><option value="1">25%</option><option value="2" selected>50%</option><option value="3">75%</option></select></label><label>Volume<input id="volume" type="range" min="0" max="15" value="10" /></label></div><div class="transport"><h2>Transport</h2><div class="transport-buttons"><button id="playBtn" class="primary big-btn">Play</button><button id="stopBtn" class="big-btn">Stop</button><button id="recordBtn" class="danger big-btn">Record</button><button id="clearBtn" class="big-btn">Clear</button></div><label class="check-label"><input id="metronomeRecord" type="checkbox" checked />Metronome while recording</label><div class="row"><button id="quantizeBtn">Quantize recording</button><button id="toGridBtn">Recording → Grid</button><button id="gridToEventsBtn">Grid → Events</button></div></div><div class="lcd"><div id="lcdMain" class="lcd-main">C4</div><div class="lcd-sub"><div id="lcdFreq">261.63 Hz</div><div id="lcdState">Stopped · CH2 square</div><div id="lcdStep">Step 0 / 32</div></div></div><div class="hint"><strong>PC keyboard piano</strong><br>White keys: <span class="kbd">A</span> <span class="kbd">S</span> <span class="kbd">D</span> <span class="kbd">F</span> <span class="kbd">G</span> <span class="kbd">H</span> <span class="kbd">J</span> <span class="kbd">K</span> <span class="kbd">L</span><br>Black keys: <span class="kbd">W</span> <span class="kbd">E</span> <span class="kbd">T</span> <span class="kbd">Y</span> <span class="kbd">U</span> <span class="kbd">O</span> <span class="kbd">P</span><br>Octave: <span class="kbd">Z</span>/<span class="kbd">X</span>. Record: <span class="kbd">R</span>. Play/stop: <span class="kbd">Space</span>.</div><div class="hint warning">CH1 and CH2 are monophonic Game Boy square channels. If multiple notes start on the same step, the current game driver writes the last one and the earlier notes are lost. CH4 remains noise percussion.</div><h2>Project storage</h2><div class="row"><button id="saveLocal">Save local</button><button id="loadLocal">Load local</button><button id="downloadJson">Download JSON</button></div><label>Import JSON<input id="importJson" type="file" accept="application/json" /></label></section>
+    <section class="panel stack"><h2>Song</h2><div class="grid-2"><label>Asset name<input id="assetName" value="eyenaut_theme" spellcheck="false" /></label><label>Channel<select id="channel"><option value="1">CH1 Square + sweep</option><option value="2" selected>CH2 Square</option><option value="4">CH4 Noise percussion</option></select></label></div><div class="grid-3"><label>BPM<input id="bpm" type="number" min="40" max="240" value="120" /></label><label>Step division<select id="division"><option value="4">1/4</option><option value="8" selected>1/8</option><option value="16">1/16</option></select></label><label>Pulses<input id="pulses" type="number" min="1" max="64" value="16" /></label></div><div class="grid-2"><label>Octave<input id="octave" type="number" min="2" max="6" value="4" /></label><label>Default length steps<input id="defaultLen" type="number" min="1" max="16" value="2" /></label></div><div class="grid-2"><label>Duty<select id="duty"><option value="0">12.5%</option><option value="1">25%</option><option value="2" selected>50%</option><option value="3">75%</option></select></label><label>Volume<input id="volume" type="range" min="0" max="15" value="10" /></label></div><div class="transport"><h2>Transport</h2><div class="transport-buttons"><button id="playBtn" class="primary big-btn">Play</button><button id="stopBtn" class="big-btn">Stop</button><button id="recordBtn" class="danger big-btn">Record</button><button id="clearBtn" class="big-btn">Clear</button></div><label class="check-label"><input id="metronomeRecord" type="checkbox" checked />Metronome while recording</label><div class="row"><button id="quantizeBtn">Quantize recording</button><button id="toGridBtn">Recording → Grid</button><button id="gridToEventsBtn">Grid → Events</button></div></div><div class="lcd"><div id="lcdMain" class="lcd-main">C4</div><div class="lcd-sub"><div id="lcdFreq">261.63 Hz</div><div id="lcdState">Stopped · CH2 square</div><div id="lcdStep">Step 0 / 32</div></div></div><div class="hint"><strong>PC keyboard piano</strong><br>White keys: <span class="kbd">A</span> <span class="kbd">S</span> <span class="kbd">D</span> <span class="kbd">F</span> <span class="kbd">G</span> <span class="kbd">H</span> <span class="kbd">J</span> <span class="kbd">K</span> <span class="kbd">L</span><br>Black keys: <span class="kbd">W</span> <span class="kbd">E</span> <span class="kbd">T</span> <span class="kbd">Y</span> <span class="kbd">U</span> <span class="kbd">O</span> <span class="kbd">P</span><br>Octave: <span class="kbd">Z</span>/<span class="kbd">X</span>. Record: <span class="kbd">R</span>. Play/stop: <span class="kbd">Space</span>.</div><div class="hint warning">Each Game Boy sound channel is a single voice. This editor exports one channel at a time, so the grid keeps only one note per step.</div><h2>Project storage</h2><div class="row"><button id="saveLocal">Save local</button><button id="loadLocal">Load local</button><button id="downloadJson">Download JSON</button></div><label>Import JSON<input id="importJson" type="file" accept="application/json" /></label></section>
     <section class="stack"><div class="panel stack"><h2>Piano</h2><div class="piano-wrap"><div id="piano" class="piano"></div></div></div><div class="panel stack"><div class="row" style="justify-content:space-between"><h2 style="margin:0">Step sequencer</h2><div class="row"><button id="shiftLeft" class="small">←</button><button id="shiftRight" class="small">→</button><button id="transposeUp" class="small">Transpose +12</button><button id="transposeDown" class="small">Transpose -12</button><button id="randomBass" class="small">Seed pattern</button><button id="clearGrid" class="small danger">Clear grid</button></div></div><div class="sequencer-wrap"><div id="sequencer" class="sequencer"></div></div></div><div class="panel stack"><h2>Recorded events</h2><div id="events" class="event-list"></div></div></section>
     <section class="panel stack right"><h2>Export</h2><div class="row"><button id="exportGbdk" class="primary">Export GBDK C</button><button id="exportData">Export data only</button><button id="exportCsv">Export CSV</button><button id="copyOutput">Copy</button><button id="downloadC">Download .h</button></div><textarea id="output" spellcheck="false"></textarea><div id="status" class="status"></div><h2>How to integrate</h2><div class="hint"><ol><li>Download the generated <strong>.h</strong>.</li><li>Include it from your GBDK project.</li><li>Call <code>gb_audio_init();</code> once.</li><li>Call <code>eyenaut_theme_update();</code> once per frame.</li><li>Call <code>eyenaut_theme_start();</code> to play.</li></ol></div><h2>GB sound register model</h2><div class="hint">Square channels use a Game Boy frequency register value computed as:<br><code>gb_freq = 2048 - 131072 / hz</code><br><br>Playback stores note index, duration in frames, duty, volume and channel. For serious music, migrate later to hUGEDriver; for SFX and short themes, this is enough.</div></section>
   </main>
@@ -129,11 +129,18 @@ function createNoiseNode(){
   return src;
 }
 
+function stopActiveNotesForSource(source,exceptMidi=null){
+  Array.from(state.activeOsc.values())
+    .filter(rec=>rec.source===source&&(exceptMidi===null||rec.midi!==exceptMidi))
+    .forEach(rec=>stopNote(rec.midi,source));
+}
+
 function startNote(midi,source="keyboard"){
   ensureAudio();
   midi=supportedMidi(midi);
   const key=source+":"+midi;
   if(state.activeOsc.has(key))return;
+  stopActiveNotesForSource(source,midi);
   const now=state.audio.currentTime;
   const gain=state.audio.createGain();
   const vol=Math.max(.001,selectedVolume()/15);
@@ -303,13 +310,22 @@ function clampNoteForLoop(note){
   const velocity=clamp(Math.round(finiteNumber(note.velocity??note.volume,selectedVolume())),0,15);
   return{midi,step,len,velocity};
 }
-function normalizeGrid(){
-  const next={};
-  Object.values(state.grid).forEach(n=>{
-    const note=clampNoteForLoop(n);
-    next[gridKey(note.midi,note.step)]=note;
+function removeGridNotesAtStep(step,exceptMidi=null){
+  Object.keys(state.grid).forEach(key=>{
+    const note=state.grid[key];
+    if(note.step===step&&(exceptMidi===null||note.midi!==exceptMidi))delete state.grid[key];
   });
-  state.grid=next;
+}
+function setGridNote(note){
+  const clean=clampNoteForLoop(note);
+  removeGridNotesAtStep(clean.step,clean.midi);
+  state.grid[gridKey(clean.midi,clean.step)]=clean;
+  return clean;
+}
+function normalizeGrid(){
+  const notes=Object.values(state.grid).map(clampNoteForLoop).sort((a,b)=>a.step-b.step||a.midi-b.midi);
+  state.grid={};
+  notes.forEach(setGridNote);
 }
 function toggleGridNote(midi,step,force=null){
   midi=supportedMidi(midi);
@@ -317,8 +333,8 @@ function toggleGridNote(midi,step,force=null){
   const k=gridKey(midi,step);
   if(force===null){
     if(state.grid[k])delete state.grid[k];
-    else state.grid[k]=clampNoteForLoop({midi,step,len:Number(els.defaultLen.value)||1,velocity:selectedVolume()});
-  }else if(force)state.grid[k]=clampNoteForLoop({midi,step,len:Number(els.defaultLen.value)||1,velocity:selectedVolume()});
+    else setGridNote({midi,step,len:Number(els.defaultLen.value)||1,velocity:selectedVolume()});
+  }else if(force)setGridNote({midi,step,len:Number(els.defaultLen.value)||1,velocity:selectedVolume()});
   else delete state.grid[k];
   renderGrid();
   updateValidationStatus();
@@ -332,7 +348,6 @@ function renderGrid(){
   updateLCD();
 }
 
-function isSquareChannel(){return els.channel.value==="1"||els.channel.value==="2"}
 function findMonophonicCollisions(notes){
   const byStep=new Map();
   notes.forEach(n=>{
@@ -342,12 +357,11 @@ function findMonophonicCollisions(notes){
   return Array.from(byStep.entries()).filter(([,items])=>items.length>1).map(([step,items])=>({step,notes:items}));
 }
 function collisionWarning(notes=getSongNotes()){
-  if(!isSquareChannel())return"";
   const collisions=findMonophonicCollisions(notes);
   if(!collisions.length)return"";
   const sample=collisions.slice(0,5).map(c=>`step ${c.step}: ${c.notes.map(n=>midiToName(n.midi)).join("/")}`).join("; ");
   const more=collisions.length>5?` and ${collisions.length-5} more`:"";
-  return`Warning: CH${els.channel.value} is monophonic. Multiple notes on ${collisions.length} step(s) will overwrite in the Game Boy driver (${sample}${more}).`;
+  return`Warning: CH${els.channel.value} is a single Game Boy voice. Multiple notes on ${collisions.length} step(s) will overwrite in the current driver (${sample}${more}).`;
 }
 function updateValidationStatus(prefix=""){
   const warning=collisionWarning();
@@ -380,9 +394,9 @@ function tickPlayback(){
   const steps=totalSteps();
   const current=state.playStep;
   let notes=Object.values(state.grid).filter(n=>n.step===current).sort((a,b)=>a.midi-b.midi);
-  if(isSquareChannel()&&notes.length>1){
+  if(notes.length>1){
     if(!state.warnedPreviewCollision){
-      setStatus(`Square-channel preview is monophonic; only the last note at each step is played. ${collisionWarning()}`,true);
+      setStatus(`Preview is monophonic; only the last note at each step is played. ${collisionWarning()}`,true);
       state.warnedPreviewCollision=true;
     }
     notes=[notes[notes.length-1]];
@@ -450,15 +464,13 @@ function recordingToGrid(){
       const startStep=clamp(Math.round(on.t/stepDuration),0,Math.max(0,steps-1));
       const endStep=clamp(Math.round(t/stepDuration),startStep+1,steps);
       const len=clamp(endStep-startStep,1,Math.max(1,steps-startStep));
-      const note=clampNoteForLoop({midi,step:startStep,len,velocity:on.velocity});
-      state.grid[gridKey(note.midi,note.step)]=note;
+      setGridNote({midi,step:startStep,len,velocity:on.velocity});
     }
   });
   active.forEach(on=>{
     const startStep=clamp(Math.round(on.t/stepDuration),0,Math.max(0,steps-1));
     const endStep=steps;
-    const note=clampNoteForLoop({midi:on.midi,step:startStep,len:endStep-startStep,velocity:on.velocity});
-    state.grid[gridKey(note.midi,note.step)]=note;
+    setGridNote({midi:on.midi,step:startStep,len:endStep-startStep,velocity:on.velocity});
   });
   normalizeGrid();
   renderGrid();
@@ -492,8 +504,7 @@ function seedPattern(){
   const base=(Number(els.octave.value)||4)*12+12;
   [[0,0],[4,4],[7,8],[12,12],[7,16],[4,20],[2,24],[7,28]].forEach(([off,step])=>{
     if(step>=totalSteps())return;
-    const note=clampNoteForLoop({midi:base+off,step,len:2,velocity:selectedVolume()});
-    state.grid[gridKey(note.midi,note.step)]=note;
+    setGridNote({midi:base+off,step,len:2,velocity:selectedVolume()});
   });
   renderGrid();
   updateValidationStatus("Seed pattern created.");
@@ -507,6 +518,7 @@ function shiftGrid(dir){
     next[gridKey(note.midi,note.step)]=note;
   });
   state.grid=next;
+  normalizeGrid();
   renderGrid();
   updateValidationStatus("Grid shifted.");
 }
@@ -517,6 +529,7 @@ function transposeGrid(delta){
     next[gridKey(note.midi,note.step)]=note;
   });
   state.grid=next;
+  normalizeGrid();
   renderGrid();
   updateValidationStatus(`Transposed ${delta>0?"+12":"-12"} semitones.`);
 }

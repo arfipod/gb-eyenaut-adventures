@@ -60,7 +60,7 @@ Use `Recording -> Grid` after recording. The conversion:
 - Keeps a minimum note length of 1 step.
 - Preserves recorded velocity as Game Boy volume.
 
-The grid can also be edited directly. `Transpose +12` and `Transpose -12` shift all grid notes by one octave while clamping them to the supported note range.
+The grid can also be edited directly. Because the tool exports one Game Boy channel at a time, the grid keeps only one note per step. Adding a note on a step replaces any previous note on that step. `Transpose +12` and `Transpose -12` shift all grid notes by one octave while clamping them to the supported note range.
 
 ## Exporting GBDK C
 
@@ -92,13 +92,15 @@ make clean all
 
 The current game calls `audio_update()` once per frame. That function advances the theme by `EYENAUT_THEME_STEP_FRAMES` and triggers notes from `eyenaut_theme_notes`.
 
-## Monophonic CH1 And CH2
+## Monophonic Game Boy Channels
 
-The current ROM music path is effectively monophonic per square channel. `src/audio.c` plays the theme on CH2 by writing CH2 registers. If multiple notes share the same step, the update loop writes them one after another in the same frame, so the last write wins.
+Each physical Game Boy audio channel is one voice. The hardware can layer channels together, but one channel by itself does not play chords. The current recorder exports one channel at a time, so the editor enforces one note per step.
 
-That means same-step note clusters may sound like chords in the WebAudio preview, but they do not become real chords in the ROM. For CH1 and CH2 exports, treat the grid as one note per step. When the tool detects same-step clusters on CH1 or CH2, it warns in the UI and export area.
+The current ROM music path is also monophonic in practice. `src/audio.c` plays the theme on CH2 by writing CH2 registers. If multiple notes share the same step in older or external data, the update loop writes them one after another in the same frame, so the last write wins.
 
-CH4 is different: it is noise percussion, not pitched square-wave harmony. The square-channel monophonic warning does not apply to CH4 in the same way.
+That means same-step note clusters may sound like chords in a generic WebAudio sketch, but they do not become real chords in the ROM. The tool normalizes imported and converted grid data to one note per step, and still warns if externally injected data contains same-step clusters.
+
+CH4 is different in tone because it is noise percussion, not pitched square-wave harmony, but it is still a single Game Boy channel. Treat it as one event per step in this editor.
 
 ## Melody And Duty Guidance
 
